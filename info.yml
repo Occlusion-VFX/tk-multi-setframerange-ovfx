@@ -21,14 +21,14 @@ configuration:
 
     sg_in_frame_field:
         type: str
-        default_value: "sg_cut_in"
+        default_value: "sg_head_in"
         description: The ShotGrid field to use to retrieve the in frame. The app will look
                      for this field on the entity associated with the current context (e.g.
                      the current shot, current asset etc).
 
     sg_out_frame_field:
         type: str
-        default_value: "sg_cut_out"
+        default_value: "sg_tail_out"
         description: The ShotGrid field to use to retrieve the out frame. The app will look
                      for this field on the entity associated with the current context (e.g.
                      the current shot, current asset etc).

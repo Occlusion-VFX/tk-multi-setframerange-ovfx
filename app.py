@@ -71,8 +71,8 @@ class SetFrameRange(Application):
 
         """
         try:
-            (new_in, new_out) = self.get_frame_range_from_shotgun()
-            (current_in, current_out) = self.get_current_frame_range()
+            (new_in, new_out, new_fps, width, height) = self.get_frame_range_from_shotgun()
+            (current_in, current_out, current_fps,) = self.get_current_frame_range()
 
             if new_in is None or new_out is None:
                 message = "SG has not yet been populated with \n"
@@ -84,13 +84,28 @@ class SetFrameRange(Application):
             # because the frame range is often set in multiple places (e.g render range,
             # current range, anim range etc), we go ahead an update every time, even if the values
             # in Shotgun are the same as the values reported via get_current_frame_range()
-            self.set_frame_range(new_in, new_out)
+            ''' original method '''
+            # self.set_frame_range(new_in, new_out)
+            # message = "Your scene has been updated with the \n"
+            # message += "latest frame ranges from ShotGrid.\n\n"
+            # message += "Previous start frame: %s\n" % current_in
+            # message += "New start frame: %s\n\n" % new_in
+            # message += "Previous end frame: %s\n" % current_out
+            # message += "New end frame: %s\n\n" % new_out
+
+            ''' OVFX Method '''
+            self.set_frame_range(new_in, new_out, new_fps, (width, height))
             message = "Your scene has been updated with the \n"
-            message += "latest frame ranges from ShotGrid.\n\n"
-            message += "Previous start frame: %s\n" % current_in
-            message += "New start frame: %s\n\n" % new_in
-            message += "Previous end frame: %s\n" % current_out
-            message += "New end frame: %s\n\n" % new_out
+            message += "latest shot info from shotgun.\n\n"
+            if new_in != None and new_out != None:
+                message += "Start frame: {} > {} \n\n".format(current_in, new_in)
+                message += "End frame: {} > {} \n\n".format( current_out, new_out )
+
+            if new_fps != None:
+                message += "Frame Rate: {} > {}\n\n".format(current_fps, new_fps)
+
+            if width != None and height != None:
+                message += "Setting root format to: {}x{} \n\n".format(width, height)
 
             QtGui.QMessageBox.information(None, "Frame range updated!", message)
 
@@ -124,7 +139,7 @@ class SetFrameRange(Application):
 
         sg_in_field = self.get_setting("sg_in_frame_field")
         sg_out_field = self.get_setting("sg_out_frame_field")
-        fields = [sg_in_field, sg_out_field]
+        fields = [sg_in_field, sg_out_field, 'sg_framerate', 'sg_image_width', 'sg_image_height']
 
         data = self.shotgun.find_one(sg_entity_type, filters=sg_filters, fields=fields)
 
@@ -143,7 +158,7 @@ class SetFrameRange(Application):
                 "field %s.%s!" % (sg_entity_type, sg_entity_type, sg_out_field)
             )
 
-        return (data[sg_in_field], data[sg_out_field])
+        return ( data[sg_in_field], data[sg_out_field], data['sg_framerate'], data['sg_image_width'], data['sg_image_height'] )
 
     def get_current_frame_range(self):
         """
@@ -171,9 +186,9 @@ class SetFrameRange(Application):
                 )
             )
 
-        if not isinstance(result, tuple) or (
-            isinstance(result, tuple) and len(result) != 2
-        ):
+        if not isinstance(result, tuple):# or (
+            # isinstance(result, tuple) and len(result) != 2
+        # ):
             raise tank.TankError(
                 "Unexpected type returned from 'hook_frame_operation' for operation get_"
                 "frame_range - expected a 'tuple' with (in_frame, out_frame) values but "
@@ -182,7 +197,7 @@ class SetFrameRange(Application):
             )
         return result
 
-    def set_frame_range(self, in_frame, out_frame):
+    def set_frame_range(self, in_frame, out_frame, framerate, res):
         """
         set_current_frame_range will execute the hook specified in the 'hook_frame_operation'
             setting for this app.
@@ -201,6 +216,8 @@ class SetFrameRange(Application):
                 "set_frame_range",
                 in_frame=in_frame,
                 out_frame=out_frame,
+                framerate=framerate,
+                res=res,
             )
         except Exception as err:
             error_message = traceback.format_exc()

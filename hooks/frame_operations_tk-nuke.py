@@ -9,6 +9,7 @@
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
 import nuke
+import os
 
 import sgtk
 
@@ -30,9 +31,10 @@ class FrameOperation(HookBaseClass):
         """
         current_in = int(nuke.root()["first_frame"].value())
         current_out = int(nuke.root()["last_frame"].value())
-        return (current_in, current_out)
+        current_fps = int(nuke.root()['fps'].value())
+        return (current_in, current_out, current_fps)
 
-    def set_frame_range(self, in_frame=None, out_frame=None, **kwargs):
+    def set_frame_range(self, in_frame=None, out_frame=None, framerate=None, res=None, **kwargs):
         """
         set_frame_range will set the frame range using `in_frame` and `out_frame`
 
@@ -45,12 +47,41 @@ class FrameOperation(HookBaseClass):
         """
 
         # unlock
-        locked = nuke.root()["lock_range"].value()
-        if locked:
-            nuke.root()["lock_range"].setValue(False)
+        # locked = nuke.root()["lock_range"].value()
+        # if locked:
+        nuke.root()["lock_range"].setValue(False)
+
         # set values
-        nuke.root()["first_frame"].setValue(in_frame)
-        nuke.root()["last_frame"].setValue(out_frame)
+        if in_frame != None or out_frame != None:
+            nuke.root()["first_frame"].setValue(in_frame)
+            nuke.root()["last_frame"].setValue(out_frame)
+            
+        if framerate != None:  
+            nuke.root()['fps'].setValue(framerate)
+            
+        width, height = res
+        if width != None and height != None:
+            width, height = res
+            current_width = nuke.root()["format"].value().width()
+            current_height = nuke.root()["format"].value().height()
+            
+            if width != current_width or height != current_height:
+                file = os.path.abspath(__file__)
+                name = str(file).split(os.sep)[3]
+                
+                fmt = None
+                for f in nuke.formats():
+                    if f.width() == width and f.height() == height:
+                        fmt = f.name()
+                        
+                    if fmt == None:
+                        nuke.addFormat(
+                            '{0} {1} {2}'.format(int(width), int(height), name)
+                        )
+                        fmt = name
+                    print('\n', fmt, '\n')
+                    nuke.root()['format'].setValue(fmt)
+
         # and lock again
-        if locked:
-            nuke.root()["lock_range"].setValue(True)
+        # if locked:
+        nuke.root()["lock_range"].setValue(True)
